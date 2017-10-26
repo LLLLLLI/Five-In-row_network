@@ -2,6 +2,7 @@ package Server;
 
 import javax.swing.plaf.synth.SynthEditorPaneUI;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -15,9 +16,7 @@ public class FiveInRowServer {
         sqlManager = new SqlManager();
         try {
             sqlManager.Connect();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
+        } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
         }
 
@@ -80,6 +79,12 @@ public class FiveInRowServer {
                 winAction(message);
             else if(message.contains("RequireUpdate"))
                 update(message);
+            else if(message.contains("WatchChess"))
+                watchChess(message);
+            else if(message.contains("QuitGame"))
+                quitGame(message);
+            else if(message.contains("SignOut"))
+                offline(message);
             else
                 System.out.println("Illegal requirement");
         }
@@ -163,9 +168,12 @@ public class FiveInRowServer {
                 if(info.equals("YES")){
                     String ipA = sqlManager.getIP(playerA);
                     server.AcceptVS(ipA, playerB, "YES");
-                    String gameid = playerA + "VS" + playerB;
-                    sqlManager.Addgame(gameid, playerA, playerB);
-                    System.out.println("Succeeded starting a new game!");
+                    if(server.SendSucceed())
+                    {
+                        String gameid = playerA + "VS" + playerB;
+                        sqlManager.Addgame(gameid, playerA, playerB);
+                        System.out.println("Succeeded starting a new game!");
+                    }
                 }
                 else if(info.equals("NO")){
                     String ipA = sqlManager.getIP(playerB);
@@ -202,6 +210,12 @@ public class FiveInRowServer {
                 sqlManager.updateChessBoard(chessID, Integer.parseInt(n), color);
                 String ipB = sqlManager.getIP(playerB);
                 server.ChessMove(ipB, Integer.parseInt(n), Integer.parseInt(color));
+                ArrayList<String> allVisitors = sqlManager.getAllVisitors(chessID);
+                if(allVisitors != null){
+                    for (String allVisitor : allVisitors) {
+                        server.ChessMoveforVisitor(sqlManager.getIP(allVisitor), Integer.parseInt(n), Integer.parseInt(color));
+                    }
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -233,7 +247,6 @@ public class FiveInRowServer {
                 System.out.println("Succeeded ending a game!");
                 sqlManager.updateTimes(playerA, true);
                 sqlManager.updateTimes(playerB, false);
-                server.YouLose(sqlManager.getIP(playerB), playerA);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -257,6 +270,52 @@ public class FiveInRowServer {
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    private void watchChess(String s){
+        String[] strArr = s.split("/");
+        String ipA = strArr[1];
+        String username = strArr[3];
+        String password = strArr[4];
+        String chessID = strArr[5];
+        try {
+            if(sqlManager.checkPassword(username, password)){
+                String info = "";
+                if(sqlManager.addVistor(chessID, username)){
+                    info = sqlManager.getChessBoard(chessID);
+                }
+                else{
+                    info = "NO";
+                }
+                server.SendChessBoard(ipA, info);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void offline(String s){
+        String[] strArr = s.split("/");
+        String username = strArr[3];
+        String password = strArr[4];
+        try {
+            if(sqlManager.checkPassword(username, password)){
+                sqlManager.userOffLine(username);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void quitGame(String s){
+        String[] strArr = s.split("/");
+        String username = strArr[3];
+        String password = strArr[4];
+        String userB = strArr[5];
     }
 
     public static void main(String args[]){

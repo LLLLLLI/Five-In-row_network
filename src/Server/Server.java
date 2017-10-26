@@ -26,6 +26,10 @@ public class Server {
         return serverConnections.startListen(ServerPort);
     }
 
+    public boolean SendSucceed(){
+        return clientConnection.sendSucceed();
+    }
+
     public void ConfirmRegister(String ClientAddr, String confirmInformation){
         String[] tmp = {"ConfirmRegister", confirmInformation};
         SendtoClient(ClientAddr, Combine(tmp));
@@ -68,11 +72,23 @@ public class Server {
         String[] tmp = {"StopMatch", UserA, info};
         SendtoClient(ClientAddrUserB, Combine(tmp));
     }
+
     public void YouLose(String ClientAddrUserB, String UserA) {
         String[] tmp = {"StopMatch", UserA};
         SendtoClient(ClientAddrUserB, Combine(tmp));
     }
 
+    // 一场棋局最多有五个观战者，若ChessBoard里为NO则说明观战名额以满，否则里面为棋盘信息 255个0、1、2,  0为空 1为黑 2为白
+    public void SendChessBoard(String ClientAddrUserA, String ChessBoard){
+        String[] tmp = {"SendChessBoard", ChessBoard};
+        SendtoClient(ClientAddrUserA, Combine(tmp));
+    }
+
+    //给观战者提供棋子信息，约定与ChessMove一致
+    public void ChessMoveforVisitor(String ClientAddrUserA, int n, int color){
+        String[] tmp = {"ChessMove", String.valueOf(n), String.valueOf(color)};
+        SendtoClient(ClientAddrUserA, Combine(tmp));
+    }
 
     //general send
     public void SendtoClient(String ClientAddr, String data){
