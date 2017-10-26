@@ -1,6 +1,5 @@
 package Server;
 
-import javax.swing.plaf.synth.SynthEditorPaneUI;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -11,7 +10,7 @@ public class FiveInRowServer {
     private LinkedBlockingQueue<String> messageQueue;
     private SqlManager sqlManager;
 
-    FiveInRowServer(){
+    private FiveInRowServer(){
         System.out.println("Initialization...");
         sqlManager = new SqlManager();
         try {
@@ -97,6 +96,7 @@ public class FiveInRowServer {
         String ip = strArr[1];
         String id = strArr[3];
         String password = strArr[4];
+
         try {
             sqlManager.Adduser(id, password, ip);
             System.out.println("Succeeded register");
@@ -114,6 +114,7 @@ public class FiveInRowServer {
         String ip = strArr[1];
         String id = strArr[3];
         String password = strArr[4];
+
         try {
             if(sqlManager.checkPassword(id, password)){
                 sqlManager.userOnLine(id, ip);
@@ -139,6 +140,7 @@ public class FiveInRowServer {
         String playerA = strArr[3];
         String password = strArr[4];
         String playerB = strArr[5];
+
         try {
             if(sqlManager.checkOnline(playerB)) {
                 if (sqlManager.checkPassword(playerA, password)) {
@@ -199,6 +201,7 @@ public class FiveInRowServer {
         String playerB = strArr[5];
         String n = strArr[6];
         String color = strArr[7];
+
         try {
             if(sqlManager.checkPassword(playerA, password)){
                 String chessID;
@@ -235,6 +238,7 @@ public class FiveInRowServer {
         String password = strArr[4];
         String playerB = strArr[5];
         String color = strArr[6];
+
         try {
             if(sqlManager.checkPassword(playerA, password)){
                 String chessID;
@@ -260,6 +264,7 @@ public class FiveInRowServer {
         String ipA = strArr[1];
         String userA = strArr[3];
         String password = strArr[4];
+
         try {
             if(sqlManager.checkPassword(userA, password)){
                 server.SendOnlineUser(ipA, sqlManager.getOnlineUser());
@@ -278,6 +283,7 @@ public class FiveInRowServer {
         String username = strArr[3];
         String password = strArr[4];
         String chessID = strArr[5];
+
         try {
             if(sqlManager.checkPassword(username, password)){
                 String info = "";
@@ -300,6 +306,7 @@ public class FiveInRowServer {
         String[] strArr = s.split("/");
         String username = strArr[3];
         String password = strArr[4];
+
         try {
             if(sqlManager.checkPassword(username, password)){
                 sqlManager.userOffLine(username);

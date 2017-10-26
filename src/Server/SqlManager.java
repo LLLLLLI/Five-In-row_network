@@ -1,26 +1,32 @@
 package Server;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Properties;
 
 public class SqlManager {
 
     private Connection connection;
-    private String driver = "com.mysql.jdbc.Driver";
-    private String url = "jdbc:mysql://localhost:3306/gameserver";
-    private String user = "root";
-    private String password = "123456";
 
-    public Boolean Connect() throws ClassNotFoundException, SQLException {
+    private static InputStream in  = SqlManager.class.getClassLoader().getResourceAsStream("config.properties");
+    private static Properties prop = new Properties();
+
+    public void Connect() throws ClassNotFoundException, SQLException {
+        try {
+            prop.load(in);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        String driver = prop.getProperty("jdbc.driverClassName");
+        String url = prop.getProperty("jdbc.url");
+        String user = prop.getProperty("jdbc.username");
+        String password = prop.getProperty("jdbc.password");
+
         Class.forName(driver);
         connection = DriverManager.getConnection(url,user,password);
-        if(!connection.isClosed()) {
-            System.out.println("Succeeded connecting to the Database!");
-            return true;
-        }else{
-            System.out.println("Failed connecting to the Database!");
-            return false;
-        }
     }
 
     //添加新用户
