@@ -80,6 +80,8 @@ public class FiveInRowServer {
                 update(message);
             else if(message.contains("WatchChess"))
                 watchChess(message);
+            else if(message.contains("QuitWatch"))
+                quitWatch(message);
             else if(message.contains("QuitGame"))
                 quitGame(message);
             else if(message.contains("SignOut"))
@@ -89,6 +91,9 @@ public class FiveInRowServer {
         }
     }
 
+    private void quitWatch(String message) {
+
+    }
 
 
     private void registerAction(String s){
@@ -117,11 +122,15 @@ public class FiveInRowServer {
 
         try {
             if(sqlManager.checkPassword(id, password)){
-                sqlManager.userOnLine(id, ip);
-                System.out.println("Succeeded Login");
-                server.ConfirmLogin(ip, "YES");
-                server.SendOnlineUser(ip, sqlManager.getOnlineUser());
-                server.SendPlayingGame(ip, sqlManager.getOnlineGame());
+                if(sqlManager.userOnLine(id, ip)){
+                    System.out.println("Succeeded Login");
+                    server.ConfirmLogin(ip, "YES");
+                    server.SendOnlineUser(ip, sqlManager.getOnlineUser());
+                    server.SendPlayingGame(ip, sqlManager.getOnlineGame());
+                }else{
+                    System.out.println("Fail Login:password wrong!");
+                    server.ConfirmLogin(ip, "NO");
+                }
             }else{
                 System.out.println("Fail Login:password wrong!");
                 server.ConfirmLogin(ip, "NO");
@@ -214,8 +223,9 @@ public class FiveInRowServer {
                 String ipB = sqlManager.getIP(playerB);
                 server.ChessMove(ipB, Integer.parseInt(n), Integer.parseInt(color));
                 ArrayList<String> allVisitors = sqlManager.getAllVisitors(chessID);
-                if(allVisitors != null){
+                if(!allVisitors.isEmpty()){
                     for (String allVisitor : allVisitors) {
+                        System.out.print(allVisitor);
                         server.ChessMoveforVisitor(sqlManager.getIP(allVisitor), Integer.parseInt(n), Integer.parseInt(color));
                     }
                 }

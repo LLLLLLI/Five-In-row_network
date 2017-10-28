@@ -165,6 +165,13 @@ public class SqlManager {
             Connect();
             System.out.println("Reconnecting to the Database!");
         }
+        Statement statement = connection.createStatement();
+        String sql = "select * from user where id = \"" + id + "\"";
+        ResultSet rs = statement.executeQuery(sql);
+        rs.next();
+        String  state = rs.getString("state");
+        if(state.equals("o"))
+            return false;
         PreparedStatement psql;
         psql = connection.prepareStatement("update user set ip = ? where id = ?");
         psql.setString(1, ip);
@@ -260,7 +267,7 @@ public class SqlManager {
     }
 
     public ArrayList<String> getAllVisitors(String id) throws SQLException, ClassNotFoundException {
-        ArrayList<String> allVisitors = null;
+        ArrayList<String> allVisitors = new ArrayList<>();
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -271,12 +278,29 @@ public class SqlManager {
         rs.next();
         String[] dict = {"A", "B", "C", "D", "E"};
         for(int i = 0; i < 5; i++){
-            if(!rs.getString("visitor" + dict[i]).equals(""))
+            String visitor = rs.getString("visitor" + dict[i]);
+            if(visitor != null)
                 allVisitors.add(rs.getString("visitor" + dict[i]));
         }
         return allVisitors;
     }
 
+    public void deleteVisitors(String chessID, String visitID) throws SQLException, ClassNotFoundException {
+        if(connection.isClosed()){
+            Connect();
+            System.out.println("Reconnecting to the Database!");
+        }
+        Statement statement = connection.createStatement();
+        String sql = "select * from gaming where id = \"" + chessID + "\"";
+        ResultSet rs = statement.executeQuery(sql);
+        rs.next();
+        String[] dict = {"A", "B", "C", "D", "E"};
+        for(int i = 0; i < 5; i++){
+            if(!rs.getString("visitor" + dict[i]).equals(visitID)){
+
+            }
+        }
+    }
 
     //添加观战者
     public Boolean addVistor(String id, String visitorID) throws SQLException, ClassNotFoundException {
