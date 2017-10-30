@@ -1,4 +1,4 @@
-package Server;
+package Network;
 
 import java.util.concurrent.TimeUnit;
 

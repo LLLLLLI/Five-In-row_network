@@ -1,4 +1,4 @@
-package Server;
+package Network;
 
 import java.io.*;
 import java.net.*;
@@ -9,7 +9,7 @@ import java.net.*;
  */
 
 public class ClientConnection{
-    static String TAG = "ClientConnection";
+    // static String TAG = "ClientConnection";
 
     //the connection thread
     private SocketClient socketClient;
@@ -22,7 +22,7 @@ public class ClientConnection{
         MyIP = "";
     }
 
-    public boolean Send(String ServerAddr, int ServerPort, String data){
+    boolean Send(String ServerAddr, int ServerPort, String data){
 
         socketClient = new SocketClient(ServerAddr, ServerPort, data);
         socketClient.start();
@@ -34,9 +34,9 @@ public class ClientConnection{
         return !RemoteIP.equals("");
     }
 
-    public String getRemoteIP(){return RemoteIP.substring(1);}
-    public String getMyIP(){return MyIP.substring(1);}
-    public boolean sendSucceed(){return !RemoteIP.equals("");}
+    // public String getRemoteIP(){return RemoteIP.substring(1);}
+    // public String getMyIP(){return MyIP.substring(1);}
+    boolean sendSucceed(){return !RemoteIP.equals("");}
 
 
     private class SocketClient extends Thread{

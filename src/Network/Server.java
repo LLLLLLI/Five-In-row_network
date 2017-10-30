@@ -1,5 +1,7 @@
-package Server;
+package Network;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
@@ -14,7 +16,7 @@ public class Server {
     private int ServerPort;
     private int ClientPort;
 
-    Server(){
+    public Server(){
         //setting port
         ServerPort = 33000;
         ClientPort = 33001;
@@ -90,10 +92,18 @@ public class Server {
         SendtoClient(ClientAddrUserA, Combine(tmp));
     }
 
+    public void YourOpponentOffline(String ClientAddrUserA){
+        String[] tmp = {"YourOppoentOffline"};
+        SendtoClient(ClientAddrUserA, Combine(tmp));
+    }
+
     //general send
-    public void SendtoClient(String ClientAddr, String data){
+    private void SendtoClient(String ClientAddr, String data){
         System.out.println(data);
-        clientConnection.Send(ClientAddr, ClientPort, data);
+
+        ExecutorService exec = Executors.newCachedThreadPool();
+
+        exec.execute(() -> clientConnection.Send(ClientAddr, ClientPort, data));
     }
 
     //string combine

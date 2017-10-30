@@ -1,4 +1,4 @@
-package Server;
+package Database;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +30,7 @@ public class SqlManager {
     }
 
     //添加新用户
-    public Boolean Adduser(String id, String password, String ip) throws SQLException, ClassNotFoundException {
+    public void addUser(String id, String password, String ip) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -44,7 +44,6 @@ public class SqlManager {
         psql.executeUpdate();
         psql.close();
         System.out.println("Succeeded adding a user!");
-        return true;
     }
 
     public Boolean checkPassword(String id, String password) throws SQLException, ClassNotFoundException {
@@ -57,10 +56,7 @@ public class SqlManager {
         ResultSet rs = statement.executeQuery(sql);
         rs.next();
         String correctPassword = rs.getString("password");
-        if(password.equals(correctPassword))
-            return true;
-        else
-            return false;
+        return password.equals(correctPassword);
     }
 
     public String getIP(String id) throws SQLException, ClassNotFoundException {
@@ -72,21 +68,7 @@ public class SqlManager {
         String sql = "select * from user where id = \"" + id + "\"";
         ResultSet rs = statement.executeQuery(sql);
         rs.next();
-        String ip = rs.getString("ip");
-        return ip;
-    }
-
-    public Boolean checkOnline(String username) throws SQLException, ClassNotFoundException {
-        if(connection.isClosed()){
-            Connect();
-            System.out.println("Reconnecting to the Database!");
-        }
-        Statement statement = connection.createStatement();
-        String sql = "select * from user where id = \"" + username + "\"";
-        ResultSet rs = statement.executeQuery(sql);
-        rs.next();
-        String state = rs.getString("state");
-        return state.equals("o");
+        return rs.getString("ip");
     }
 
     public String getOnlineUser() throws SQLException, ClassNotFoundException {
@@ -97,10 +79,10 @@ public class SqlManager {
         Statement statement = connection.createStatement();
         String sql = "select * from user where state = 'o'";
         ResultSet rs = statement.executeQuery(sql);
-        String onlineUser = "";
-        while(rs.next())
-            onlineUser +=  rs.getString("id") + " " + rs.getInt("scores") + "/";
-        return onlineUser;
+        StringBuilder onlineUser = new StringBuilder();
+        while(rs.next())    // 太强大了 自动把不优雅的写法变优雅
+            onlineUser.append(rs.getString("id")).append(" ").append(rs.getInt("scores")).append("/");
+        return onlineUser.toString();
     }
 
     public String getOnlineGame() throws SQLException, ClassNotFoundException {
@@ -111,13 +93,13 @@ public class SqlManager {
         Statement statement = connection.createStatement();
         String sql = "select * from gaming";
         ResultSet rs = statement.executeQuery(sql);
-        String onlineGame = "";
+        StringBuilder onlineGame = new StringBuilder();
         while(rs.next())
-            onlineGame = onlineGame + rs.getString("id") + "/";
-        return onlineGame;
+            onlineGame.append(rs.getString("id")).append("/");
+        return onlineGame.toString();
     }
 
-    public Boolean updateTimes(String id, Boolean win) throws SQLException, ClassNotFoundException {
+    public void updateTimes(String id, Boolean win) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -126,26 +108,26 @@ public class SqlManager {
         String sql = "select * from user where id = \"" + id + "\"";
         ResultSet rs = statement.executeQuery(sql);
         rs.next();
-        int playtimes = rs.getInt("playtimes") + 1;
-        int wintimes = rs.getInt("wintimes");
+        int playTimes = rs.getInt("playtimes") + 1;
+        int wintTimes = rs.getInt("wintimes");
         PreparedStatement psql;
         psql = connection.prepareStatement("update user set playtimes = ? where id = ?");
-        psql.setInt(1, playtimes);
+        psql.setInt(1, playTimes);
         psql.setString(2, id);
         psql.executeUpdate();
         if(win){
             psql = connection.prepareStatement("update user set wintimes = ? where id = ?");
-            psql.setInt(1, wintimes+1);
+            psql.setInt(1, wintTimes+1);
             psql.setString(2, id);
             psql.executeUpdate();
         }
         psql.close();
         System.out.println("Succeeded updating the playing times!");
+        updateScore(id, win, false);
         userOnLine(id, getIP(id));
-        return true;
     }
 
-    private Boolean userStateChange(String id, String state) throws SQLException, ClassNotFoundException {
+    private void userStateChange(String id, String state) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -157,10 +139,52 @@ public class SqlManager {
         psql.executeUpdate();
         psql.close();
         System.out.println("Succeeded Changing user state!");
-        return true;
     }
 
-    public Boolean userOnLine(String id, String ip) throws SQLException, ClassNotFoundException {
+    public void updateScore(String user, Boolean win, Boolean quit) throws SQLException, ClassNotFoundException {
+        if(connection.isClosed()){
+            Connect();
+            System.out.println("Reconnecting to the Database!");
+        }
+        Statement statement = connection.createStatement();
+        String sql = "select * from user where id = \"" + user + "\"";
+        ResultSet rs = statement.executeQuery(sql);
+        int score;
+        rs.next();
+        score = rs.getInt("score");
+        if(win){
+            score += 3;
+        }
+        else{
+            score -= 2;
+        }
+        if(quit)
+            score -= 3;
+        PreparedStatement psql;
+        psql = connection.prepareStatement("update user set score = ? where id = ?");
+        psql.setInt(1, score);
+        psql.setString(2, user);
+        psql.executeUpdate();
+        psql.close();
+        System.out.println("Succeeded updating the scores!");
+    }
+
+    public void userOnLine(String id, String ip) throws SQLException, ClassNotFoundException {
+        if(connection.isClosed()){
+            Connect();
+            System.out.println("Reconnecting to the Database!");
+        }
+        PreparedStatement psql;
+        psql = connection.prepareStatement("update user set ip = ? where id = ?");
+        psql.setString(1, ip);
+        psql.setString(2, id);
+        psql.executeUpdate();
+        psql.close();
+        userStateChange(id, "o");
+        System.out.println("Database:Succeeded online!");
+    }
+
+    public Boolean checkState(String id, String state) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -169,44 +193,19 @@ public class SqlManager {
         String sql = "select * from user where id = \"" + id + "\"";
         ResultSet rs = statement.executeQuery(sql);
         rs.next();
-        String  state = rs.getString("state");
-        if(state.equals("o"))
-            return false;
-        PreparedStatement psql;
-        psql = connection.prepareStatement("update user set ip = ? where id = ?");
-        psql.setString(1, ip);
-        psql.setString(2, id);
-        psql.executeUpdate();
-        psql.close();
-        if(userStateChange(id, "o")) {
-            System.out.println("Database:Succeeded online!");
-            return true;
-        }
-        return false;
+        return state.equals(rs.getString("state"));
     }
 
-    public Boolean userOffLine(String id) throws SQLException, ClassNotFoundException {
-        if(userStateChange(id, "f")) {
-            System.out.println("Database:Succeeded offline!");
-            return true;
-        }else{
-            System.out.println("Database:Failed offline!");
-            return false;
-        }
+    public void userOffLine(String id) throws SQLException, ClassNotFoundException {
+        userStateChange(id, "f");
     }
 
-    private Boolean usergaming(String id) throws SQLException, ClassNotFoundException {
-        if(userStateChange(id, "g")) {
-            System.out.println("Database:Succeeded gaming!");
-            return true;
-        }else{
-            System.out.println("Database:Failed gaming!");
-            return false;
-        }
+    private void userGaming(String id) throws SQLException, ClassNotFoundException {
+        userStateChange(id, "g");
     }
 
     //添加新棋局
-    public Boolean Addgame(String id, String playerA, String playerB) throws SQLException, ClassNotFoundException {
+    public void Addgame(String id, String playerA, String playerB) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -224,13 +223,12 @@ public class SqlManager {
         psql.executeUpdate();
         psql.close();
         System.out.println("Succeeded adding a game!");
-        usergaming(playerA);
-        usergaming(playerB);
-        return true;
+        userGaming(playerA);
+        userGaming(playerB);
     }
 
     //更新棋局信息
-    public Boolean updateChessBoard(String id, int n, String color) throws SQLException, ClassNotFoundException {
+    public void updateChessBoard(String id, int n, String color) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -250,7 +248,6 @@ public class SqlManager {
         psql.executeUpdate();
         psql.close();
         System.out.println("Succeeded updating the chess board!");
-        return true;
     }
 
 
@@ -297,13 +294,18 @@ public class SqlManager {
         String[] dict = {"A", "B", "C", "D", "E"};
         for(int i = 0; i < 5; i++){
             if(!rs.getString("visitor" + dict[i]).equals(visitID)){
-
+                PreparedStatement psql;
+                psql = connection.prepareStatement("update gaming set visitor" + dict[i] + " = null where id = ?");
+                psql.setString(2, chessID);
+                psql.executeUpdate();
+                psql.close();
+                break;
             }
         }
     }
 
     //添加观战者
-    public Boolean addVistor(String id, String visitorID) throws SQLException, ClassNotFoundException {
+    public Boolean addVisitor(String id, String visitorID) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -340,10 +342,10 @@ public class SqlManager {
     }
 
     //删除对局
-    public boolean deleteGame(String id) throws SQLException {
+    public void deleteGame(String id) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
-            System.out.println("Failed deleting the Game!");
-            return false;
+            Connect();
+            System.out.println("Reconnecting to the Database!");
         }
         PreparedStatement psql;
         psql = connection.prepareStatement("delete from gaming where id = ?");
@@ -351,11 +353,6 @@ public class SqlManager {
         psql.executeUpdate();
         psql.close();
         System.out.println("Succeeded deleting the Game!");
-        return true;
-    }
-
-    public void close() throws SQLException {
-        connection.close();
     }
 
     public static void main(String args[]) {
@@ -373,16 +370,12 @@ public class SqlManager {
             //sqlManager.userOnLine("GJDW2", "1.0.0.0");
             //sqlManager.userOnLine("GJDW3", "1.0.0.0");
             //sqlManager.userOnLine("GJDW4", "1.0.0.0");
-            System.out.println(sqlManager.checkOnline("GJDW"));
-            System.out.println(sqlManager.checkOnline("GJDW2"));
             //sqlManager.Addgame("12345", "gjdw", "fucker");
             //System.out.println(sqlManager.getOnlineUser());
             //System.out.println(sqlManager.getOnlineGame());
             //sqlManager.usergaming("GJDW");
             sqlManager.userOffLine("GJDW");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
+        } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
         }
     }
