@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 public class SqlManager {
 
@@ -99,7 +100,7 @@ public class SqlManager {
         return onlineGame.toString();
     }
 
-    public void updateTimes(String id, Boolean win) throws SQLException, ClassNotFoundException {
+    public void updateTimes(String id, Boolean win, Boolean dogfall) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -123,7 +124,7 @@ public class SqlManager {
         }
         psql.close();
         System.out.println("Succeeded updating the playing times!");
-        updateScore(id, win, false);
+        updateScore(id, win, false, dogfall);
         userOnLine(id, getIP(id));
     }
 
@@ -141,7 +142,7 @@ public class SqlManager {
         System.out.println("Succeeded Changing user state!");
     }
 
-    public void updateScore(String user, Boolean win, Boolean quit) throws SQLException, ClassNotFoundException {
+    public void updateScore(String user, Boolean win, Boolean quit, Boolean dofdall) throws SQLException, ClassNotFoundException {
         if(connection.isClosed()){
             Connect();
             System.out.println("Reconnecting to the Database!");
@@ -151,17 +152,19 @@ public class SqlManager {
         ResultSet rs = statement.executeQuery(sql);
         int score;
         rs.next();
-        score = rs.getInt("score");
+        score = rs.getInt("scores");
         if(win){
-            score += 3;
+            score += 8;
         }
         else{
-            score -= 2;
+            score += 3;
         }
         if(quit)
-            score -= 3;
+            score -= 8;
+        if(dofdall)
+            score -= 2;
         PreparedStatement psql;
-        psql = connection.prepareStatement("update user set score = ? where id = ?");
+        psql = connection.prepareStatement("update user set scores = ? where id = ?");
         psql.setInt(1, score);
         psql.setString(2, user);
         psql.executeUpdate();
@@ -291,14 +294,16 @@ public class SqlManager {
         String sql = "select * from gaming where id = \"" + chessID + "\"";
         ResultSet rs = statement.executeQuery(sql);
         rs.next();
-        String[] dict = {"A", "B", "C", "D", "E"};
+        String dict = "ABCDE";
         for(int i = 0; i < 5; i++){
-            if(!rs.getString("visitor" + dict[i]).equals(visitID)){
+            String s = rs.getString("visitor" + dict.charAt(i));
+            if(s != null && s.equals(visitID)){
                 PreparedStatement psql;
-                psql = connection.prepareStatement("update gaming set visitor" + dict[i] + " = null where id = ?");
-                psql.setString(2, chessID);
+                psql = connection.prepareStatement("update gaming set visitor" + dict.charAt(i) + " = null where id = ?");
+                psql.setString(1, chessID);
                 psql.executeUpdate();
                 psql.close();
+                System.out.println("delete visitor"+dict.charAt(i) + ":" + visitID);
                 break;
             }
         }
@@ -328,7 +333,7 @@ public class SqlManager {
                     psql.setString(2, id);
                     psql.executeUpdate();
                     psql.close();
-                    System.out.println("Succeeded adding a visitor!");
+                    System.out.println("Succeeded adding a visitor:" + visitorID + "!");
                     return true;
                 }
                 if(v.equals(visitorID)) {
@@ -359,6 +364,9 @@ public class SqlManager {
         SqlManager sqlManager = new SqlManager();
         try {
             sqlManager.Connect();
+            System.out.println("sleep");
+            TimeUnit.MILLISECONDS.sleep(5000);
+            System.out.println("wake up");
             //sqlManager.close();
             //sqlManager.Adduser("GJDW4", "HEHE", "192.169.1.1");
             //sqlManager.Addgame("1234", "GJDW", "FUCKER");
@@ -374,8 +382,14 @@ public class SqlManager {
             //System.out.println(sqlManager.getOnlineUser());
             //System.out.println(sqlManager.getOnlineGame());
             //sqlManager.usergaming("GJDW");
-            sqlManager.userOffLine("GJDW");
+            //sqlManager.userOffLine("GJDW");
+            sqlManager.addVisitor("W1VSyjch", "yjch");
+            sqlManager.addVisitor("W1VSyjch", "sb");
+            sqlManager.deleteVisitors("W1VSyjch", "sb");
+            sqlManager.deleteVisitors("W1VSyjch", "yjch");
         } catch (ClassNotFoundException | SQLException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }

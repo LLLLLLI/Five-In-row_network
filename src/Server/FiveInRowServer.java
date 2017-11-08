@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class FiveInRowServer {
     private Server server;
@@ -89,8 +90,27 @@ public class FiveInRowServer {
                 quitGame(message);
             else if(message.contains("SignOut"))
                 offline(message);
+            else if(message.contains("Dogfall"))
+                dogFall(message);
             else
                 System.out.println("Illegal requirement");
+        }
+    }
+
+    private void dogFall(String message) {
+        String[] strArr = message.split("/");
+        String userA = strArr[3];
+        String password = strArr[4];
+        String userB = strArr[5];
+        try {
+            if(sqlManager.checkPassword(userA, password)){
+                sqlManager.updateTimes(userA, true, true);
+                sqlManager.updateTimes(userB, true, true);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
@@ -135,12 +155,10 @@ public class FiveInRowServer {
 
         try {
             if(sqlManager.checkPassword(id, password)){
-                if(!sqlManager.checkState(id, "o")){
+                if(true){
                     server.ConfirmLogin(ip, "YES");
-                    if(server.SendSucceed()){
-                        System.out.println("Succeeded Login");
-                        sqlManager.userOnLine(id, ip);
-                    }
+                    System.out.println("Succeeded Login");
+                    sqlManager.userOnLine(id, ip);
                 }else{
                     System.out.println("Fail Login:password wrong!");
                     server.ConfirmLogin(ip, "NO");
@@ -165,6 +183,8 @@ public class FiveInRowServer {
         String playerB = strArr[5];
 
         try {
+            if(playerA.equals(playerB))
+                return;  // 若请求与自己对战 无视
             if(sqlManager.checkState(playerB, "o")) {
                 if (sqlManager.checkPassword(playerA, password)) {
                     String ipB = sqlManager.getIP(playerB);
@@ -198,7 +218,7 @@ public class FiveInRowServer {
                     }
                 }
                 else if(info.equals("NO")){
-                    String ipA = sqlManager.getIP(playerB);
+                    String ipA = sqlManager.getIP(playerA);
                     server.AcceptVS(ipA, playerB, "NO");
                     System.out.println("Refuse to start a new game!");
                 }
@@ -227,7 +247,6 @@ public class FiveInRowServer {
                 }else{
                     chessID = playerB + "VS" + playerA;
                 }
-                sqlManager.updateChessBoard(chessID, Integer.parseInt(n), color);
                 String ipB = sqlManager.getIP(playerB);
                 server.ChessMove(ipB, Integer.parseInt(n), Integer.parseInt(color));
                 ArrayList<String> allVisitors = sqlManager.getAllVisitors(chessID);
@@ -237,6 +256,7 @@ public class FiveInRowServer {
                         server.ChessMoveforVisitor(sqlManager.getIP(allVisitor), Integer.parseInt(n), Integer.parseInt(color));
                     }
                 }
+                sqlManager.updateChessBoard(chessID, Integer.parseInt(n), color);
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -255,16 +275,10 @@ public class FiveInRowServer {
 
         try {
             if(sqlManager.checkPassword(playerA, password)){
-                String chessID;
-                if(color.equals("1")){
-                    chessID = playerA + "VS" + playerB;
-                }else{
-                    chessID = playerB + "VS" + playerA;
-                }
-                sqlManager.deleteGame(chessID);
+                // TimeUnit.MILLISECONDS.sleep(1000);
                 System.out.println("Succeeded ending a game!");
-                sqlManager.updateTimes(playerA, true);
-                sqlManager.updateTimes(playerB, false);
+                sqlManager.updateTimes(playerA, true, false);
+                sqlManager.updateTimes(playerB, false, false);
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -278,7 +292,7 @@ public class FiveInRowServer {
         String password = strArr[4];
 
         try {
-            if(sqlManager.checkPassword(userA, password) && sqlManager.checkState(userA, "o")){
+            if(sqlManager.checkPassword(userA, password)){
                 server.SendOnlineUser(ipA, sqlManager.getOnlineUser());
                 server.SendPlayingGame(ipA, sqlManager.getOnlineGame());
             }
@@ -334,9 +348,20 @@ public class FiveInRowServer {
                 server.YourOpponentOffline(sqlManager.getIP(userB));
                 sqlManager.userOnLine(username, sqlManager.getIP(username));
                 sqlManager.userOnLine(userB, sqlManager.getIP(userB));
-                sqlManager.updateScore(username, false, true);
+                sqlManager.updateScore(username, false, true, false);
+
+                TimeUnit.MILLISECONDS.sleep(5000);
+                sqlManager.deleteGame(username+"VS"+userB);
             }
         } catch (SQLException | ClassNotFoundException e) {
+            try {
+                sqlManager.deleteGame(userB+"VS"+username);
+            } catch (SQLException e1) {
+                e1.printStackTrace();
+            } catch (ClassNotFoundException e1) {
+                e1.printStackTrace();
+            }
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
