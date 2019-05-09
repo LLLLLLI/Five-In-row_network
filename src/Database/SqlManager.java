@@ -154,13 +154,13 @@ public class SqlManager {
         rs.next();
         score = rs.getInt("scores");
         if(win){
-            score += 8;
-        }
-        else{
             score += 3;
         }
+        else{
+            score -= 2;
+        }
         if(quit)
-            score -= 8;
+            score -= 3;
         if(dofdall)
             score -= 2;
         PreparedStatement psql;

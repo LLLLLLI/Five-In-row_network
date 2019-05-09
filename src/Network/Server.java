@@ -3,6 +3,7 @@ package Network;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by 王赣宇 on 2017/10/15.
@@ -64,9 +65,17 @@ public class Server {
         SendtoClient(ClientAddrUserA, Combine(tmp));
     }
 
-    public void ChessMove(String ClientAddrUserA, int n, int color){
+    public void ChessMove(String ClientAddrUserA, int n, int color, String opponent){
         String[] tmp = {"ChessMove",String.valueOf(n), String.valueOf(color)};
         SendtoClient(ClientAddrUserA, Combine(tmp));
+        try {
+            TimeUnit.SECONDS.sleep(6);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if(!clientConnection.sendSucceed()){
+            YourOpponentOffline(opponent);
+        }
     }
 
     //    info: = RUNAWAY or PLAYEROFFLINE
@@ -97,13 +106,16 @@ public class Server {
         SendtoClient(ClientAddrUserA, Combine(tmp));
     }
 
+    public void OffLine(String ClientAddrUserA){
+        String[] tmp = {"OffLine"};
+        SendtoClient(ClientAddrUserA, Combine(tmp));
+    }
+
     //general send
     private void SendtoClient(String ClientAddr, String data){
         System.out.println(data);
 
-        ExecutorService exec = Executors.newCachedThreadPool();
-
-        exec.execute(() -> clientConnection.Send(ClientAddr, ClientPort, data));
+        clientConnection.Send(ClientAddr, ClientPort, data);
     }
 
     //string combine

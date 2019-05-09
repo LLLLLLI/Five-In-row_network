@@ -6,6 +6,8 @@ import Network.Server;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -80,8 +82,21 @@ public class FiveInRowServer {
                 stopMatchAction(message);
             else if(message.contains("Win"))
                 winAction(message);
-            else if(message.contains("RequireUpdate"))
+            else if(message.contains("RequireUpdate")){
                 update(message);
+                try {
+                    TimeUnit.MILLISECONDS.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                update(message);
+                try {
+                    TimeUnit.MILLISECONDS.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                update(message);
+            }
             else if(message.contains("WatchChess"))
                 watchChess(message);
             else if(message.contains("QuitWatch"))
@@ -154,15 +169,16 @@ public class FiveInRowServer {
         String password = strArr[4];
 
         try {
-            if(sqlManager.checkPassword(id, password)){
-                if(true){
-                    server.ConfirmLogin(ip, "YES");
-                    System.out.println("Succeeded Login");
-                    sqlManager.userOnLine(id, ip);
-                }else{
-                    System.out.println("Fail Login:password wrong!");
-                    server.ConfirmLogin(ip, "NO");
+            if(sqlManager.checkPassword(id, password) && !sqlManager.checkState(id, "g")){
+                if(sqlManager.checkState(id, "o")){
+                    String oldIP = sqlManager.getIP(id);
+                    System.out.println(oldIP);
+                    if(!oldIP.equals(ip))
+                        server.OffLine(oldIP);
                 }
+                server.ConfirmLogin(ip, "YES");
+                System.out.println("Succeeded Login");
+                sqlManager.userOnLine(id, ip);
             }else{
                 System.out.println("Fail Login:password wrong!");
                 server.ConfirmLogin(ip, "NO");
@@ -248,14 +264,29 @@ public class FiveInRowServer {
                     chessID = playerB + "VS" + playerA;
                 }
                 String ipB = sqlManager.getIP(playerB);
-                server.ChessMove(ipB, Integer.parseInt(n), Integer.parseInt(color));
+                ExecutorService exec = Executors.newCachedThreadPool();
+
+                exec.execute(() -> server.ChessMove(ipB, Integer.parseInt(n), Integer.parseInt(color), playerA));
+                System.out.println(1);
                 ArrayList<String> allVisitors = sqlManager.getAllVisitors(chessID);
+                System.out.println(2);
                 if(!allVisitors.isEmpty()){
                     for (String allVisitor : allVisitors) {
-                        System.out.print(allVisitor);
-                        server.ChessMoveforVisitor(sqlManager.getIP(allVisitor), Integer.parseInt(n), Integer.parseInt(color));
+                        //System.out.print(allVisitor);
+                        System.out.println(3);
+                        exec.execute(() -> {
+                            try {
+                                server.ChessMoveforVisitor(sqlManager.getIP(allVisitor), Integer.parseInt(n), Integer.parseInt(color));
+                            } catch (SQLException e) {
+                                e.printStackTrace();
+                            } catch (ClassNotFoundException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                        System.out.println("send visitor");
                     }
                 }
+                exec.shutdown();
                 sqlManager.updateChessBoard(chessID, Integer.parseInt(n), color);
             }
         } catch (SQLException | ClassNotFoundException e) {
@@ -279,6 +310,8 @@ public class FiveInRowServer {
                 System.out.println("Succeeded ending a game!");
                 sqlManager.updateTimes(playerA, true, false);
                 sqlManager.updateTimes(playerB, false, false);
+                sqlManager.userOnLine(playerA, sqlManager.getIP(playerA));
+                sqlManager.userOnLine(playerB, sqlManager.getIP(playerB));
             }
         } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
@@ -346,11 +379,13 @@ public class FiveInRowServer {
         try {
             if(sqlManager.checkPassword(username, password)){
                 server.YourOpponentOffline(sqlManager.getIP(userB));
+                if(sqlManager.checkState(username, "g")) {
+                    sqlManager.updateScore(username, false, true, false);
+                    sqlManager.updateScore(userB, true, false,false);
+                }
                 sqlManager.userOnLine(username, sqlManager.getIP(username));
                 sqlManager.userOnLine(userB, sqlManager.getIP(userB));
-                sqlManager.updateScore(username, false, true, false);
-
-                TimeUnit.MILLISECONDS.sleep(5000);
+                TimeUnit.MILLISECONDS.sleep(3000);
                 sqlManager.deleteGame(username+"VS"+userB);
             }
         } catch (SQLException | ClassNotFoundException e) {

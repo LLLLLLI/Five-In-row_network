@@ -63,7 +63,7 @@ public class ClientConnection{
             //server IP
             String serverIP = addr;
             //setting 5 second to interrupt the socketclient thread
-            new TimmerClose(this, 5);
+            new TimmerClose(this, 1);
 
             try{
                 //Log.d(TAG, "start try");
@@ -82,9 +82,10 @@ public class ClientConnection{
                 e1.printStackTrace();
             }finally {
                 try {
-                    outputStream.close();
-                    socket.close();
-
+                    if(outputStream!=null) {
+                        outputStream.close();
+                        socket.close();
+                    }
                 } catch (Exception e2){e2.printStackTrace();}
             }
         }
